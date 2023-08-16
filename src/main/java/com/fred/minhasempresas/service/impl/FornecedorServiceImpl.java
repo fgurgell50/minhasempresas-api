@@ -133,7 +133,7 @@ public class FornecedorServiceImpl implements FornecedorService {
 
 	@Override
 	@Transactional
-	public Fornecedor atualizarFornecedor(Fornecedor fornecedor) {
+	public Fornecedor atualizar(Fornecedor fornecedor) {
 		Objects.requireNonNull(fornecedor.getFornecedor_id());
 		validarFonecedor(fornecedor);
 		return repository.save(fornecedor);

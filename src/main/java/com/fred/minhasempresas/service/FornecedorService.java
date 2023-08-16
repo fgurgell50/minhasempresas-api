@@ -12,7 +12,7 @@ public interface FornecedorService {
 	
 	Fornecedor salvarFornecedor(Fornecedor fornecedor);
 	
-	Fornecedor atualizarFornecedor(Fornecedor fornecedor);
+	Fornecedor atualizar(Fornecedor fornecedor);
 	
 	void deletar(Fornecedor fornecedor);
 	

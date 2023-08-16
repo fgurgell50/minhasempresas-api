@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,9 +20,9 @@ import com.fred.minhasempresas.service.EmpresaService;
 import com.fred.minhasempresas.service.FornecedorService;
 import com.fred.minhasempresas.service.exceptions.RegraNegocioException;
 
-
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -110,6 +111,21 @@ public class FornecedorResource {
 	            .collect(Collectors.toList());
 	}
 	
+	@PutMapping("{id}")
+	public ResponseEntity atualizar( @PathVariable("id") Long id, @RequestBody FornecedorDTO dto ) {
+			return service.obterPorId(id).map( entity -> {
+			try {
+				Fornecedor fornecedor = converter(dto);
+				fornecedor.setFornecedor_id(entity.getFornecedor_id());
+				service.atualizar(fornecedor);
+				return ResponseEntity.ok(fornecedor);			
+			}catch (RegraNegocioException e) {			
+				return ResponseEntity.badRequest().body(e.getMessage());
+			}
+		}).orElseGet(() -> 
+		new ResponseEntity("Lancamento não encontrado ma base de dados", HttpStatus.BAD_REQUEST));
+	}
+	
 	@GetMapping
 	public ResponseEntity buscar(
 			@RequestParam( value = "cnpj_cpf" , required = false) String cnpj_cpf,
@@ -131,6 +147,16 @@ public class FornecedorResource {
 		return ResponseEntity.ok(fornecedor);
 	}
 	
+	@GetMapping("{id}")
+	public ResponseEntity obterFornecedor( @PathVariable("id") Long id) {
+		
+		System.out.println("Fornecedor de obterFornecedor:" + service.obterPorId(id));
+
+		return service.obterPorId(id)
+				.map( fornecedor -> new ResponseEntity(converter(fornecedor), HttpStatus.OK))
+				.orElseGet( () -> new ResponseEntity(HttpStatus.NOT_FOUND));
+	}
+	
 	@DeleteMapping("{id}")
 	public ResponseEntity deletar(@PathVariable("id") Long id) {
 		System.out.println("Objeto Fornecedor recuperado" + id);
@@ -147,7 +173,52 @@ public class FornecedorResource {
 		new ResponseEntity("Fornecedor não encontrado ma base de dados", HttpStatus.BAD_REQUEST));
 	}
 	
+	private FornecedorDTO converter(Fornecedor fornecedor) {
+		
+	    Long empresaId = fornecedor.getEmpresas().get(0).getEmpresa_id();
+	    EmpresaDTO empresaDTO = EmpresaDTO.builder().id(empresaId).build();
+	    List<EmpresaDTO> empresasDTO = Collections.singletonList(empresaDTO);
+	    
+		return FornecedorDTO.builder()
+				.Id(fornecedor.getFornecedor_id())
+				.cnpj_cpf(fornecedor.getCnpj_cpf())
+				.nome(fornecedor.getNome())
+				.email(fornecedor.getEmail())
+				.rg(fornecedor.getRg())
+				.data_nascimento(fornecedor.getData_nascimento())
+				.cep(fornecedor.getCep())
+				.empresas(empresasDTO)
+				.build();
+	}
 	
+	private Fornecedor converter(FornecedorDTO dto) {
+		
+		System.out.println("Objeto DTO em Converter" + dto);
+		
+		Fornecedor fornecedor = new Fornecedor();
+		fornecedor.setFornecedor_id(dto.getId());
+		fornecedor.setCnpj_cpf(dto.getCnpj_cpf());
+		fornecedor.setNome(dto.getNome());
+		fornecedor.setEmail(dto.getEmail());
+		fornecedor.setData_nascimento(dto.getData_nascimento());
+		fornecedor.setCep(dto.getCep());
+		
+	    List<EmpresaDTO> empresasDTO = dto.getEmpresas();
+	    if (empresasDTO != null && !empresasDTO.isEmpty()) {
+	        Long empresaId = empresasDTO.get(0).getId();
+	        Optional<Empresa> empresaOptional = empresaService.obterPorId(empresaId);
+	        if (empresaOptional.isPresent()) {
+	            fornecedor.setEmpresas(Collections.singletonList(empresaOptional.get()));
+	        } else {
+	            throw new RegraNegocioException("Empresa não encontrada para o ID informado");
+	        }
+	    } else {
+	        fornecedor.setEmpresas(null);
+	    }
+
+	    System.out.println("Objeto Fornecedor em Converter" + fornecedor);
+	    return fornecedor;
+	}
 }
 
 
